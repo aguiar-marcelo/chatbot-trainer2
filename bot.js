@@ -29,7 +29,6 @@ function start(client) {
     if (message.isGroupMsg === false) {
       const nome = message.sender.pushname || "amigo";
       const userId = message.from;
-
       if (message.body === "1") {
         client.sendText(
           userId,
@@ -38,25 +37,26 @@ Sou seu PERSONAL TRAINER virtual.
 Eu te ajudo com treinos, dietas e dicas de saúde! Escolha uma opção do menu digitando o número correspondente.`
         );
       } else if (message.body === '2') {
-        client.sendText(userId, 'Para montar seu treino personalizado, me diga seu nível (iniciante, intermediário, avançado).');
+        client.sendText(userId, 'Para montar seu treino personalizado, me diga seu nível \n1 - iniciante \n2 - intermediário \n3 - avançado ');
         usersData[userId] = { step: 'nivel' };
       } else if (usersData[userId] && usersData[userId].step) {
         let user = usersData[userId];
 
         if (user.step === 'nivel') {
-          user.nivel = message.body.toLowerCase();
-          client.sendText(userId, 'Agora, informe seu sexo (masculino/feminino).');
+          user.nivel = parseFloat(message.body);
+          client.sendText(userId, 'Agora, informe seu sexo \n1 - masculino \n2 - feminino');
           user.step = 'sexo';
         } else if (user.step === 'sexo') {
-          user.sexo = message.body.toLowerCase();
-          if (user.sexo !== 'masculino' && user.sexo !== 'feminino') {
-            client.sendText(userId, 'Por favor, informe "masculino" ou "feminino".');
+          user.sexo = parseFloat(message.body);
+          if (user.sexo !== 1 && user.sexo !== 2) {
+            client.sendText(userId, 'Por favor, informe \n1 - masculino \n2 - feminino');
             return;
           }
 
-          const treino = gerarTreino(user.nivel, user.sexo);
+          const treino = gerarTreinoSemana(user.nivel, user.sexo);
           client.sendText(userId, `${nome}, aqui está seu treino personalizado:\n\n${treino}`);
           delete user.step;
+          usersData = {};
         }
       } else if (message.body === "3") {
         client.sendText(
@@ -124,41 +124,59 @@ function calcularIMC(peso, altura) {
 function calcularAgua(peso) {
   return peso * 0.035;
 }
+function gerarTreinoSemana(nivel, sexo) {
+  let treinoSemana = "";
+  const diasTreino = {
+    1: ["Segunda", "Quarta", "Sexta"], // Iniciante
+    2: ["Segunda", "Terça", "Quarta", "Quinta", "Sexta"], // Intermediário
+    3: ["Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"] // Avançado
+  };
 
-function gerarTreino(nivel, sexo) {
-  let treino = "";
-  if (sexo === "masculino") {
-    treino += "**Treino Focado na Parte Superior**\n";
-    if (nivel === "iniciante") {
-      treino += "3 séries de 10 repetições - Supino reto\n";
-      treino += "3 séries de 10 repetições - Desenvolvimento com halteres\n";
-    } else if (nivel === "intermediário") {
-      treino += "4 séries de 12 repetições - Supino reto\n";
-      treino += "4 séries de 12 repetições - Desenvolvimento com halteres\n";
-      treino += "4 séries de 12 repetições - Barra fixa\n";
-    } else {
-      treino += "5 séries de 12 repetições - Supino reto\n";
-      treino += "5 séries de 12 repetições - Desenvolvimento com halteres\n";
-      treino += "5 séries de 12 repetições - Barra fixa\n";
-      treino += "5 séries de 12 repetições - Crucifixo inclinado\n";
+  const dias = diasTreino[nivel];
+
+  dias.forEach((dia, index) => {
+    treinoSemana += `**Treino de ${dia}**\n`;
+
+    if (sexo === 1) { // Masculino
+      if (index % 3 === 0) {
+        treinoSemana += "**Treino de Peito e Tríceps**\n";
+        treinoSemana += nivel >= 2 ? "4 séries de 12 repetições - Supino reto\n" : "3 séries de 10 repetições - Supino reto\n";
+        treinoSemana += nivel >= 2 ? "4 séries de 12 repetições - Desenvolvimento com halteres\n" : "3 séries de 10 repetições - Desenvolvimento com halteres\n";
+        treinoSemana += nivel >= 3 ? "5 séries de 12 repetições - Crucifixo inclinado\n" : "";
+      } else if (index % 3 === 1) {
+        treinoSemana += "**Treino de Costas e Bíceps**\n";
+        treinoSemana += nivel >= 2 ? "4 séries de 12 repetições - Barra fixa\n" : "3 séries de 10 repetições - Barra fixa\n";
+        treinoSemana += nivel >= 2 ? "4 séries de 12 repetições - Remada curvada\n" : "3 séries de 10 repetições - Remada curvada\n";
+        treinoSemana += nivel >= 3 ? "5 séries de 12 repetições - Rosca direta com barra\n" : "";
+      } else {
+        treinoSemana += "**Treino de Pernas**\n";
+        treinoSemana += nivel >= 2 ? "4 séries de 12 repetições - Agachamento\n" : "3 séries de 10 repetições - Agachamento\n";
+        treinoSemana += nivel >= 2 ? "4 séries de 12 repetições - Leg Press\n" : "3 séries de 10 repetições - Leg Press\n";
+        treinoSemana += nivel >= 3 ? "5 séries de 12 repetições - Passada com halteres\n" : "";
+      }
+    } else if (sexo === 2) { // Feminino
+      if (index % 3 === 0) {
+        treinoSemana += "**Treino de Glúteo e Posterior**\n";
+        treinoSemana += nivel >= 2 ? "4 séries de 12 repetições - Stiff\n" : "3 séries de 10 repetições - Stiff\n";
+        treinoSemana += nivel >= 2 ? "4 séries de 12 repetições - Glúteo na polia\n" : "3 séries de 10 repetições - Glúteo na polia\n";
+        treinoSemana += nivel >= 3 ? "5 séries de 12 repetições - Levantamento terra sumô\n" : "";
+      } else if (index % 3 === 1) {
+        treinoSemana += "**Treino de Quadríceps e Panturrilhas**\n";
+        treinoSemana += nivel >= 2 ? "4 séries de 12 repetições - Agachamento\n" : "3 séries de 10 repetições - Agachamento\n";
+        treinoSemana += nivel >= 2 ? "4 séries de 12 repetições - Leg Press\n" : "3 séries de 10 repetições - Leg Press\n";
+        treinoSemana += nivel >= 3 ? "5 séries de 12 repetições - Panturrilha em pé\n" : "";
+      } else {
+        treinoSemana += "**Treino de Superiores e Core**\n";
+        treinoSemana += nivel >= 2 ? "4 séries de 12 repetições - Desenvolvimento com halteres\n" : "3 séries de 10 repetições - Desenvolvimento com halteres\n";
+        treinoSemana += nivel >= 2 ? "4 séries de 12 repetições - Remada curvada\n" : "3 séries de 10 repetições - Remada curvada\n";
+        treinoSemana += nivel >= 3 ? "5 séries de 12 repetições - Rosca direta com barra\n" : "";
+      }
     }
-  } else {
-    treino += "**Treino Focado em Membros Inferiores**\n";
-    if (nivel === "iniciante") {
-      treino += "3 séries de 10 repetições - Agachamento\n";
-      treino += "3 séries de 10 repetições - Leg Press\n";
-    } else if (nivel === "intermediário") {
-      treino += "4 séries de 12 repetições - Agachamento\n";
-      treino += "4 séries de 12 repetições - Leg Press\n";
-      treino += "4 séries de 12 repetições - Passada com halteres\n";
-    } else {
-      treino += "5 séries de 12 repetições - Agachamento\n";
-      treino += "5 séries de 12 repetições - Leg Press\n";
-      treino += "5 séries de 12 repetições - Passada com halteres\n";
-      treino += "5 séries de 12 repetições - Glúteo na polia\n";
-    }
-  }
-  return treino;
+
+    treinoSemana += "\n";
+  });
+
+  return treinoSemana;
 }
 
 async function buscarAcademiasProximas(client, user, latitude, longitude) {
