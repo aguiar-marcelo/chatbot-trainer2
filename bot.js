@@ -18,9 +18,11 @@ venom
   .then((client) => start(client))
   .catch((error) => console.log(error));
 
-const usersIMC = {};
-const usersMacro = {};
-const usersData = {};
+  const usersIMC = {};
+  const usersMacro = {};
+  const usersData = {};
+  const usersAgua = {};
+
 
 function start(client) {
   client.onMessage(async (message) => {
@@ -31,7 +33,9 @@ function start(client) {
       if (message.body === "1") {
         client.sendText(
           userId,
-          `Olá, ${nome}!\n\nSou seu PERSONAL TRAINER virtual.\nEu te ajudo com treinos, dietas e dicas de saúde! Escolha uma opção do menu digitando o número correspondente.`
+          `Olá, ${nome}!
+Sou seu PERSONAL TRAINER virtual.
+Eu te ajudo com treinos, dietas e dicas de saúde! Escolha uma opção do menu digitando o número correspondente.`
         );
       } else if (message.body === '2') {
         client.sendText(userId, 'Para montar seu treino personalizado, me diga seu nível (iniciante, intermediário, avançado).');
@@ -52,27 +56,16 @@ function start(client) {
 
           const treino = gerarTreino(user.nivel, user.sexo);
           client.sendText(userId, `${nome}, aqui está seu treino personalizado:\n\n${treino}`);
-          delete user.step; // Remover o passo para não solicitar novamente
+          delete user.step;
         }
       } else if (message.body === "3") {
-        if (usersData[userId]) {
-          const { peso, altura, idade, sexo } = usersData[userId];
-          const tmb = calcularTMB(peso, altura, idade, sexo);
-          client.sendText(
-            userId,
-            `${nome}, sua Taxa Metabólica Basal é de aproximadamente ${tmb.toFixed(
-              2
-            )} kcal por dia.`
-          );
-        } else {
-          client.sendText(
-            userId,
-            "Para calcular sua TMB, informe primeiro seu peso (em kg). Exemplo: 70"
-          );
-          usersData[userId] = { step: "peso" };
-        }
-      } else if (usersData[userId] && usersData[userId].step) {
-        let user = usersData[userId];
+        client.sendText(
+          userId,
+          "Para calcular seu IMC, me informe primeiro seu peso (em kg). Exemplo: 70"
+        );
+        usersIMC[userId] = { step: "peso" };
+      } else if (usersIMC[userId] && usersIMC[userId].step) {
+        let user = usersIMC[userId];
 
         if (user.step === "peso") {
           user.peso = parseFloat(message.body);
@@ -83,51 +76,31 @@ function start(client) {
           user.step = "altura";
         } else if (user.step === "altura") {
           user.altura = parseFloat(message.body);
-          client.sendText(userId, "Agora, informe sua idade. Exemplo: 25");
-          user.step = "idade";
-        } else if (user.step === "idade") {
-          user.idade = parseInt(message.body);
+          const imc = calcularIMC(user.peso, user.altura);
           client.sendText(
             userId,
-            "Por último, informe seu sexo (masculino/feminino)."
+            `${nome}, seu Índice de Massa Corporal (IMC) é ${imc.toFixed(2)}.`
           );
-          user.step = "sexo";
-        } else if (user.step === "sexo") {
-          user.sexo = message.body.toLowerCase();
-          if (user.sexo !== "masculino" && user.sexo !== "feminino") {
-            client.sendText(
-              userId,
-              'Por favor, informe "masculino" ou "feminino".'
-            );
-            return;
-          }
-
-          const tmb = calcularTMB(
-            user.peso,
-            user.altura,
-            user.idade,
-            user.sexo
-          );
-          client.sendText(
-            userId,
-            `${nome}, sua Taxa Metabólica Basal é de aproximadamente ${tmb.toFixed(
-              2
-            )} kcal por dia.`
-          );
-          delete user.step; // Remover o passo para não solicitar novamente
+          delete usersIMC[userId];
         }
       } else if (message.body === "4") {
         client.sendText(
           userId,
-          "Para calcular seu IMC, me informe primeiro sua altura (em metros). Exemplo: 1.75"
+          "Para saber a quantidade ideal de água diária, me informe seu peso (em kg). Exemplo: 70"
         );
-        usersIMC[userId] = { step: "altura" };
+        usersAgua[userId] = { step: "peso" };
+      } else if (usersAgua[userId] && usersAgua[userId].step) {
+        let user = usersAgua[userId];
+        if (user.step === "peso") {
+          user.peso = parseFloat(message.body);
+          const agua = calcularAgua(user.peso);
+          client.sendText(
+            userId,
+            `${nome}, a quantidade ideal de água diária para você é aproximadamente ${agua.toFixed(2)} litros.`
+          );
+          delete usersAgua[userId];
+        }
       } else if (message.body === "5") {
-        client.sendText(
-          userId,
-          "Para saber a quantidade ideal de água diária, me envie seu peso (em kg). Exemplo: 70"
-        );
-      } else if (message.body === "6") {
         client.sendText(
           userId,
           "Por favor, envie sua localização para encontrar academias próximas. No WhatsApp, clique no ícone de **clipe de papel 📎** e selecione **Localização**."
@@ -137,39 +110,57 @@ function start(client) {
       } else {
         client.sendText(
           userId,
-          `Olá, ${nome}! Escolha uma das opções:\n1 - Como funciona\n2 - Montar treino personalizado\n3 - Calcular minha taxa metabolica basal\n4 - Verificar IMC\n5 - Quantidade de água diária\n6 - Academias próximas a mim`
+          `Olá, ${nome}! Escolha uma das opções:\n1 - Como funciona\n2 - Montar treino personalizado\n3 - Verificar IMC\n4 - Quantidade de água diária\n5 - Academias próximas a mim`
         );
       }
     }
   });
 }
 
+function calcularIMC(peso, altura) {
+  return peso / (altura * altura);
+}
+
+function calcularAgua(peso) {
+  return peso * 0.035;
+}
+
 function gerarTreino(nivel, sexo) {
-  let treino = '';
-  if (sexo === 'masculino') {
-    treino += '**Treino Focado na Parte Superior**\n';
-    treino += nivel === 'iniciante' ? '3 séries de 10 repetições - Supino reto\n3 séries de 10 repetições - Desenvolvimento com halteres\n' :
-              nivel === 'intermediário' ? '4 séries de 12 repetições - Supino reto\n4 séries de 12 repetições - Desenvolvimento com halteres\n' :
-              '5 séries de 12 repetições - Supino reto\n5 séries de 12 repetições - Desenvolvimento com halteres\n';
+  let treino = "";
+  if (sexo === "masculino") {
+    treino += "**Treino Focado na Parte Superior**\n";
+    if (nivel === "iniciante") {
+      treino += "3 séries de 10 repetições - Supino reto\n";
+      treino += "3 séries de 10 repetições - Desenvolvimento com halteres\n";
+    } else if (nivel === "intermediário") {
+      treino += "4 séries de 12 repetições - Supino reto\n";
+      treino += "4 séries de 12 repetições - Desenvolvimento com halteres\n";
+      treino += "4 séries de 12 repetições - Barra fixa\n";
+    } else {
+      treino += "5 séries de 12 repetições - Supino reto\n";
+      treino += "5 séries de 12 repetições - Desenvolvimento com halteres\n";
+      treino += "5 séries de 12 repetições - Barra fixa\n";
+      treino += "5 séries de 12 repetições - Crucifixo inclinado\n";
+    }
   } else {
-    treino += '**Treino Focado em Membros Inferiores**\n';
-    treino += nivel === 'iniciante' ? '3 séries de 10 repetições - Agachamento\n3 séries de 10 repetições - Leg Press\n' :
-              nivel === 'intermediário' ? '4 séries de 12 repetições - Agachamento\n4 séries de 12 repetições - Leg Press\n' :
-              '5 séries de 12 repetições - Agachamento\n5 séries de 12 repetições - Leg Press\n';
+    treino += "**Treino Focado em Membros Inferiores**\n";
+    if (nivel === "iniciante") {
+      treino += "3 séries de 10 repetições - Agachamento\n";
+      treino += "3 séries de 10 repetições - Leg Press\n";
+    } else if (nivel === "intermediário") {
+      treino += "4 séries de 12 repetições - Agachamento\n";
+      treino += "4 séries de 12 repetições - Leg Press\n";
+      treino += "4 séries de 12 repetições - Passada com halteres\n";
+    } else {
+      treino += "5 séries de 12 repetições - Agachamento\n";
+      treino += "5 séries de 12 repetições - Leg Press\n";
+      treino += "5 séries de 12 repetições - Passada com halteres\n";
+      treino += "5 séries de 12 repetições - Glúteo na polia\n";
+    }
   }
   return treino;
 }
 
-
-function calcularTMB(peso, altura, idade, sexo) {
-  if (sexo === "masculino") {
-    return 88.36 + 13.4 * peso + 4.8 * altura * 100 - 5.7 * idade;
-  } else {
-    return 447.6 + 9.2 * peso + 3.1 * altura * 100 - 4.3 * idade;
-  }
-}
-
-// Função para buscar academias próximas via Google Places API
 async function buscarAcademiasProximas(client, user, latitude, longitude) {
   try {
     const url = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${latitude},${longitude}&radius=2000&type=gym&key=${GOOGLE_API_KEY}`;
