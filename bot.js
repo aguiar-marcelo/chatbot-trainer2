@@ -1,7 +1,7 @@
 const venom = require("venom-bot");
 const axios = require("axios");
 
-const GOOGLE_API_KEY = "AIzaSyButGGe0w_Rr8rbYKLHMSHJHawSBsNjjEk"; // Substitua pela sua chave da API do Google
+const GOOGLE_API_KEY = "api_google_key"; 
 
 venom
   .create({
